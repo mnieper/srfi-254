@@ -79,6 +79,7 @@
     <h3>Ephemerons</h3>
 
     <!-- XXX: Exactnums have attached locations in Chez. -->
+    <!-- How do we want to handle immediate objects? -->
 
     <p>An <dfn>ephemeron</dfn> is a record structure with two fields
       called the <dfn>key</dfn> and <dfn>datum</dfn> fields whose
@@ -101,6 +102,9 @@
       locations, the location or the sequence of locations is kept
       live.
     </p>
+
+    <p><i>Comment:</i> Other procedures may keep locations live as
+      well.</p>
 
     <p>Procedure: <strong>make-ephemeron</strong> <var>key</var> <var>datum</var></p>
 
@@ -138,26 +142,24 @@
 
     <h3>Guardians</h3>
 
-    <!-- FIXME: We use accessible/inaccessible the other way round than Chez. -->
-
     <p>A <dfn>guardian</dfn> is a heterogenous structure with two
       types of elements, <dfn>accessible</dfn>
       and <dfn>inaccessible</dfn> ones.  The contents of accessible
-      elements are stored in strongly holding locations, the contents
-      of inaccessible elements are stored in weakly holding locations.
+      elements are stored in weakly holding locations, the contents
+      of inaccessible elements are stored in strongly holding locations.
     </p>
 
-    <p>An inaccessible element of a guardian can be <dfn>made
-        accessible</dfn>.  When an inaccessible element is made
-      accessible, the inaccessible element is replaced by an accessible
+    <p>An accessible element of a guardian can be <dfn>made
+        inaccessible</dfn>.  When an accessible element is made
+      inaccessible, the accessible element is replaced by an inaccessible
       element containing the same value.
     </p>
 
-    <p>If the content of an inaccessible element
+    <p>If the content of an accessible element
       denotes a location or a sequence of locations, the
-      element is made accessible in the course of the computation when the
+      element is made inaccessible in the course of the computation when the
       garbage collector reclaims the location or sequence of
-      locations.  The element may be made accessible in the course of a
+      locations.  The element may be made inaccessible in the course of a
       computation if the Scheme implementation can prove that the
       location or sequence of locations will not be kept live in the
       future of the computation if the element is made accessible.
@@ -168,12 +170,13 @@
     <p>
       A guardian is represented by a Scheme
       procedure <var>guardian</var>.  When <var>guardian</var> is
-      invoked on a Scheme value <var>obj</var>, an inaccessible elements
+      invoked on a Scheme value <var>obj</var> denoting a location or
+      a sequence of locations, an inaccessible element
       containing <var>obj</var> is added to the guardian.
-      When <var>guardian</var> is invoked on no arguments, an accessible
-      element if available is removed from the guardian and its contents
-      returned.  If no accessible element is available, <code>#f</code>
-      is returned.
+      When <var>guardian</var> is invoked on no arguments, an
+      inaccessible element if available is removed from the guardian
+      and its contents returned.  If no inaccessible element is
+      available, <code>#f</code> is returned.
     </p>
 
     <p>Procedure: <strong>make-guardian</strong></p>
@@ -197,6 +200,18 @@
     <p>Procedure: <strong>current-hash</strong> <var>obj</var></p>
 
     <p>Procedure: <strong>make-transport-cell-guardian</strong></p>
+
+    <p>Procedure: <strong>transport-cell-guardian?</strong> <var>obj</var></p>
+
+    <p>Procedure: <strong>transport-cell?</strong> <var>obj</var></p>
+
+    <p>Procedure: <strong>transport-cell-key</strong> <var>transport-cell</var></p>
+
+    <p>Procedure: <strong>transport-cell-datum</strong> <var>transport-cell</var></p>
+
+    <p>Procedure: <strong>transport-cell-broken?</strong> <var>transport-cell</var></p>
+
+
 
 <!--
 
