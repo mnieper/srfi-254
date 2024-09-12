@@ -7,7 +7,7 @@
     -->
   <head>
     <meta charset="utf-8">
-    <title>SRFI 254: Guardians</title>
+    <title>SRFI 254: Ephemerons and Guardians</title>
     <link href="/favicon.png" rel="icon" sizes="192x192" type="image/png">
     <link rel="stylesheet" href="https://srfi.schemers.org/srfi.css" type="text/css">
     <meta name="viewport" content="width=device-width, initial-scale=1"></head>
@@ -52,42 +52,172 @@
 
     <h2 id="specification">Specification</h2>
 
+    <p>This SRFI extends the reports on Scheme by stipulating that
+      locations can be <dfn>strongly holding</dfn> and <dfn>weakly
+        holding</dfn>.  Except as noted, all newly chosen locations are
+      strongly holding.</p>
+
+    <p>As specified in the reports on Scheme, implementations of
+      Scheme are required to be properly tail-recursive.  The formal
+      definition of proper tail-recursion can be found
+      in <cite><a href="#clinger">[1]</a></cite>.  This SRFI extends
+      the property tail recursive semantics in [1] by replacing the last line
+      <blockquote>
+        and <var>&beta;</var>, &hellip; do not occur within <var>v</var>, <var>&rho;</var>, <var>&kappa;</var>, <var>&sigma;</var>
+      </blockquote>
+      in the garbage collection rule with
+      <blockquote>
+        and <var>&beta;</var>, &hellip; do not occur within <var>v</var>, <var>&rho;</var>, <var>&kappa;</var>, <var>&sigma;'</var> where <var>&sigma;</var> = <var>&sigma;'</var>[<var>&beta;'</var>, &hellip; &mapsto; <var>v''</var>, &hellip;] and <var>&beta;'</var> are weakly holding.
+      </blockquote>
+    </p>
+
+    <p>This SRFI further stipulates that locations and sequences of
+      locations can be <dfn>kept live</dfn> in the course of a
+      computaiton.
+    </p>
+
     <h3>Ephemerons</h3>
 
-    <p>Locations and sequences of locations can be <dfn>referenced</dfn>.</p>
+    <!-- XXX: Exactnums have attached locations in Chez. -->
 
     <p>An <dfn>ephemeron</dfn> is a record structure with two fields
-      called the <dfn>key</dfn> and <dfn>datum</dfn> fields.</p>
+      called the <dfn>key</dfn> and <dfn>datum</dfn> fields whose
+      contents are stored in weakly holding locations.</p>
 
-    <p>Ephemerons can be <dfn>broken</dfn>.  An implementation of
-      Scheme may break an ephemeron anytime in the course of a
-      computation if its key does not denote a location or a sequence
-      of locations or if it denotes a location or sequence of
-      locations and the implementation can prove that the location or
-      sequence of locations will be not referenced in the future of
-      the computation if it is broken.
+    <p>Ephemerons can be <dfn>broken</dfn>.  If the content of its key
+      field denotes a location or a sequence of locations, the
+      ephemeron is broken in the course of the computation when the
+      garbage collector reclaims the location or sequence of
+      locations.  The ephemeron may be broken in the course of a
+      computation if the Scheme implementation can prove that the
+      location or sequence of locations will not be kept live in the
+      future of the computation if the ephemeron is broken.
     </p>
 
     <p>Procedure: <strong>reference-barrier</strong> <var>obj</var></p>
 
     <p>If <var>obj</var> is an object such as a pair, string, vector,
       or bytevector that denotes a location or a sequence of
-      locations, the location or the sequence of locations is
-      referenced.
+      locations, the location or the sequence of locations is kept
+      live.
     </p>
 
     <p>Procedure: <strong>make-ephemeron</strong> <var>key</var> <var>datum</var></p>
 
-    <p>The <code>make-ephemeron</code> returns a newly allocated
-      ephemeron with fields <var>key</var> and <var>datum</var>.
+    <p>The <code>make-ephemeron</code> procedure returns a newly
+      allocated ephemeron with fields <var>key</var>
+      and <var>datum</var>.
+    </p>
+
+    <p>Procedure: <strong>ephemeron?</strong> <var>object</var></p>
+
+    <p>The <code>ephemeron?</code> procedure returns <code>#t</code>
+      if its argument is an ephemeron, and <code>#f</code> otherwise.
+    </p>
+
+    <p>Procedure: <strong>ephemeron-key</strong> <var>ephemeron</var></p>
+
+    <p>The <code>ephemeron-key</code> procedure returns the contents
+      of the key field of <var>ephemeron</var> if the ephemeron hasn't
+      been broken, and <code>#f</code> otherwise.
+    </p>
+
+    <p>Procedure: <strong>ephemeron-datum</strong> <var>ephemeron</var></p>
+
+    <p>The <code>ephemeron-datum</code> procedure returns the contents
+      of the datum field of <var>ephemeron</var> if the ephemeron hasn't
+      been broken, and <code>#f</code> otherwise.
     </p>
 
     <p>Procedure: <strong>ephemeron-broken?</strong> <var>ephemeron</var></p>
 
     <p>The <code>ephemeron-broken?</code> procedure
-      returns <code>#t</code> if <var>ephemeron</var> is broken,
-      and <code>#f<code> otherwise.
+      returns <code>#t</code> if <var>ephemeron</var> has been broken,
+      and <code>#f</code> otherwise.
     </p>
+
+    <h3>Guardians</h3>
+
+    <p>A <dfn>guardian</dfn> is a heterogenous structure with two
+      types of elements, <dfn>accessible</dfn>
+      and <dfn>inaccessible</dfn> ones.  The contents of accessible
+      elements are stored in strongly holding locations, the contents
+      of inaccessible elements are stored in weakly holding locations.
+    </p>
+
+    <p>An inaccessible element of a guardian can be <dfn>made
+        accessible</dfn>.  When an inaccessible element is made
+      accessible, the inaccessible element is replaced by an accessible
+      element containing the same value.
+    </p>
+
+    <p>If the content of an inaccessible element
+      denotes a location or a sequence of locations, the
+      element is made accessible in the course of the computation when the
+      garbage collector reclaims the location or sequence of
+      locations.  The element may be made accessible in the course of a
+      computation if the Scheme implementation can prove that the
+      location or sequence of locations will not be kept live in the
+      future of the computation if the element is made accessible.
+    </p>
+
+    <!-- TODO: representatives -->
+
+    <p>
+      A guardian is represented by a Scheme
+      procedure <var>guardian</var>.  When <var>guardian</var> is
+      invoked on a Scheme value <var>obj</var>, an inaccessible elements
+      containing <var>obj</var> is added to the guardian.
+      When <var>guardian</var> is invoked on no arguments, an accessible
+      element if available is removed from the guardian and its contents
+      returned.  If no accessible element is available, <code>#f</code>
+      is returned.
+    </p>
+
+    <p>Procedure: <strong>make-guardian</strong></p>
+
+    <p>The <code>make-guardian</code> procedure returns a newly
+      allocated guardian with no elements.
+    </p>
+
+    <p>Procedure: <strong>guardian?</strong> <var>obj</var></p>
+
+    <p>The <code>guardian?</code> procedure returns <code>#t</code> if
+      its argument is a guardian, and <code>#f</code> otherwise.
+    </p>
+
+    <h3>Transport Guardians</h3>
+
+    <!-- XXX: If we store a key that has no associated location in a transport guardian, it will stay there forever. -->
+
+    <p>A <dfn>transport cell</dfn> ...</p>
+
+    <p>Procedure: <strong>current-hash</strong> <var>obj</var></p>
+
+    <p>Procedure: <strong>make-transport-cell-guardian</strong></p>
+
+<!--
+
+    (current-hash KEY)
+A non-pure procedure that returns a value suitable for hashing KEY. This value is only guaranteed to be stable for a limited time.
+
+(make-transport-cell-guardian)
+Returns two values, a guardian procedure and a value MAKE-TRANSPORT-CELL. The latter is a procedure of the following form:
+
+(make-transport-cell KEY VALUE)
+Returns a transport cell object that is registered with the guardian. The transport cell object will be retrievable from the guardian as soon as the current hash of KEY has changed since registration. The KEY is held weakly.
+
+(transport-cell-key TC)
+Returns the key of the transport cell TC.
+
+(transport-cell-value TC)
+Returns the value of the transport cell TC.
+
+(transport-cell-broken? TC)
+Returns #t if the key of the transport cell TC has been garbage collected.
+
+-->
+
 
     <h3>Old Specification</h3>
 
@@ -177,6 +307,12 @@
     <h2 id="implementation">Implementation</h2>
 
     <p>An implementation for Chez Scheme is provided.</p>
+
+    <h2 id="references">References</h2>
+
+    <ol>
+      <li id="clinger"><a href="https://dl.acm.org/doi/pdf/10.1145/277650.277719">William D. Clinger: <emph>Proper tail recursion and space efficiency</emph></a></li>
+    </ol>
 
     <h2 id="acknowledgements">Acknowledgements</h2>
 
