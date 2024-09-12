@@ -149,6 +149,9 @@
       of inaccessible elements are stored in strongly holding locations.
     </p>
 
+    <!-- XXX: An accessible object X in a guardian may refer to
+         another object Y.  The simple GC algorithm could make Y go away. -->
+
     <p>An accessible element of a guardian can be <dfn>made
         inaccessible</dfn>.  When an accessible element is made
       inaccessible, the accessible element is replaced by an inaccessible
@@ -158,7 +161,7 @@
     <p>If the content of an accessible element
       denotes a location or a sequence of locations, the
       element is made inaccessible in the course of the computation when the
-      garbage collector reclaims the location or sequence of
+      garbage collector is about to reclaim the location or sequence of
       locations.  The element may be made inaccessible in the course of a
       computation if the Scheme implementation can prove that the
       location or sequence of locations will not be kept live in the
