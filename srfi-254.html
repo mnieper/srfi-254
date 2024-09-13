@@ -27,6 +27,15 @@
 
     <h2 id="abstract">Abstract</h2>
 
+    <p>This SRFI describes three concepts associated with the storage
+      management of a Scheme system, ephemerons, guardians, and
+    transport cell guardians.</p>
+
+    <p>
+      An ephemeron is a record structure with a key and a value field whose ...
+    </p>
+
+
     <p>Guardians allow programs to protect objects from deallocation by the garbage collector and to determine which objects would otherwise have been deallocated. When the object has associated non-memory resources, a program can register it with a guardian. The GC will mark inaccessible objects but will not collect them; at the program's convenience, inaccessible objects are removed from the guardian and their non-memory resources are disposed of.
 
       Guardians allow objects to be saved from deallocation indefinitely so that they can be reused or so that clean-up or other actions can be performed using the data stored within the objects. Guardians avoid the problems associated with classical finalizers detailed in the Rationale section.</p>
@@ -36,21 +45,50 @@
     <ul>
       <li>Include examples.</li>
       <li>Write tests.</li>
+      <li>Expand the rationale section.</li>
+      <li>Describe and implement sublibraries.</li>
     </ul>
 
     <h2 id="rationale">Rationale</h2>
 
-    <p>The difficulties with classical finalizers are:</p>
+    <p>Neither ephemerons nor guardians can be implemented portably in
+      existing standard Scheme so incorporating them as a standard
+      features in Scheme implementations makes Scheme more expressive
+      and more portable programs possible.
+    </p>
 
-    <ul><li>When run directly by the garbage collector, they must be executed within a critical section, because the collector may interrupt the rest of the program at arbitrary points.</li>
+    <p>Ephemerons and guardians have been implemented in many Scheme
+      systems and are incorporated in other programming languages as
+      well, so their is sufficient experience both in terms of use
+      cases and implementability with those features.
+    </p>.
 
-      <li>When cyclic and shared structures must be finalized, it may be essential to control the order in which finalization is done.</li>
+    <p>Transport cell guardians are trivially to implement in Scheme
+      systems with non-moving garbage collectors.  In Scheme systems
+      with moving garbage collections, transport cell guardians or an
+      equally powerful concept are needed to when hash values are to
+      be derived from object addresses.
+    </p>
 
-      <li>They do not always allow the full range of language features to be employed. For example, allocation may not be possible from within the garbage collector, as the collector may not be re-entrant. If an error is signaled while the collector is running, it is not always clear how to recover.</li>
+    <p>Use cases for ephemerons are portable implementations hash
+      tables that hold the keys or the associated values or both
+      weakly.</p>
 
-      <li>It may or may not be appropriate to examine the object being finalized in order to determine what to do with it. In particular, it may be the Right Thing to protect the object from reclamation by placing it in a variable or a container, with or without re-registering it for finalization.</li></ul>
+    <p>Use cases for guardians are ...</p>
 
-    <p>Guardians solve all of these problems at the expense of manual reclamation. Objects are preserved by a guardian; periodically, the guardian must be invoked to allow them to be reclaimed by the collector or to preserve them.</p>
+    <p>Use cases for transport cell guardians are efficient portable
+      implementations of <code>eq?</code>-based hashing data structures.
+    </p>
+
+    <p>
+      This SRFI
+      supersedes <a href="https://srfi.schemers.org/srfi-246/srfi-246.html">SRFI
+      246</a>.  It is recommended that it
+      supersedes <a href="https://srfi.schemers.org/srfi-124/srfi-124.html">SRFI
+      124</a> as well and that SRFI 124 should be withdrawn.  This
+      SRFI renames the datum field of SRFI 124's ephemerons to value
+      field because a datum in Scheme is a particular type of value.
+    </p>
 
     <h2 id="specification">Specification</h2>
 
@@ -88,9 +126,16 @@
 
     <h3>Ephemerons</h3>
 
+    <p>The procedures in this section are exported by the <code>(srfi
+        :254 ephemerons-and-guardians ephemerons)</code> library.  The procedure <code>reference-barrier</code> is also exported by the <code>(srfi
+        :254 ephemerons-and-guardians guardians) library</code>.
+    </p>
+
     <p>An <dfn>ephemeron</dfn> is a record structure with two fields
-      called the <dfn>key</dfn> and <dfn>datum</dfn> fields whose
+      called the <dfn>key</dfn> and <dfn>value</dfn> fields whose
       contents are stored in weakly holding locations.</p>
+
+    <!-- fixme: VALUE FIELD must not be broken without key -->
 
     <p>Ephemerons can be <dfn>broken</dfn>.  If the content of its key
       field denotes a location or a sequence of locations, the
@@ -113,12 +158,12 @@
     <p><i>Comment:</i> Other procedures may keep locations live as
       well.</p>
 
-    <p>Procedure: <strong>make-ephemeron</strong> <var>key</var> <var>datum</var></p>
+    <p>Procedure: <strong>make-ephemeron</strong> <var>key</var> <var>value</var></p>
 
     <p>The <code>make-ephemeron</code> procedure returns a newly
       allocated ephemeron with fields <var>key</var>, which should
       denote a location or a sequence of locations,
-      and <var>datum</var>.
+      and <var>value</var>.
     </p>
 
     <p>Procedure: <strong>ephemeron?</strong> <var>object</var></p>
@@ -134,10 +179,10 @@
       been broken, and <code>#f</code> otherwise.
     </p>
 
-    <p>Procedure: <strong>ephemeron-datum</strong> <var>ephemeron</var></p>
+    <p>Procedure: <strong>ephemeron-value</strong> <var>ephemeron</var></p>
 
-    <p>The <code>ephemeron-datum</code> procedure returns the contents
-      of the datum field of <var>ephemeron</var> if the ephemeron hasn't
+    <p>The <code>ephemeron-value</code> procedure returns the contents
+      of the value field of <var>ephemeron</var> if the ephemeron hasn't
       been broken, and <code>#f</code> otherwise.
     </p>
 
@@ -149,6 +194,10 @@
     </p>
 
     <h3>Guardians</h3>
+
+    <p>The procedures of this section are exported by the <code>(srfi
+        :254 ephemerons-and-guardians guardians) library</code>.
+    </p>
 
     <p>Guardians first appeared in <cite><a href="dybvig">[3]</a></cite>.</p>
 
@@ -209,12 +258,16 @@
       its argument is a guardian, and <code>#f</code> otherwise.
     </p>
 
-    <h3>Transport Guardians</h3>
+    <h3>Transport Cell Guardians</h3>
+
+    <p>The procedures of this section are exported by the <code>(srfi
+        :254 ephemerons-and-guardians transport-cell-guardians) library</code>.
+    </p>
 
     <p>Transport (link) cells first appeared in <cite><a href="ghuloum">[1]</a></cite>.</p>
 
     <p>A <dfn>transport cell</dfn> is a record structure with two
-      fields called the <dfn>key</dfn> and <dfn>datum</dfn> fields.
+      fields called the <dfn>key</dfn> and <dfn>value</dfn> fields.
       The content of the key field is stored in a weakly holding
       location.
     </p>
@@ -237,8 +290,8 @@
       Transport cell guardians are represented by Scheme
       procedures <var>guardian</var>.  When <var>guardian</var> is
       invoked on two Scheme values <var>key</var>
-      and <var>datum</var>, a transport cell with
-      fields <var>key</var> and <var>datum</var> is added
+      and <var>value</var>, a transport cell with
+      fields <var>key</var> and <var>value</var> is added
       to <var>guardian</var> and returned to the caller
       of <var>guardian</var>.
     </p>
@@ -290,7 +343,7 @@
       been broken, and <code>#f</code> otherwise.
     </p>
 
-    <p>Procedure: <strong>transport-cell-datum</strong> <var>transport-cell</var></p>
+    <p>Procedure: <strong>transport-cell-value</strong> <var>transport-cell</var></p>
 
     <p>Procedure: <strong>transport-cell-broken?</strong> <var>transport-cell</var></p>
 
@@ -298,6 +351,16 @@
       returns <code>#t</code> if <var>transport-cell</var> has been broken,
       and <code>#f</code> otherwise.
     </p>
+
+    <h3>Composite Library</h3>
+
+    <p>The <code>(srfi :254)</code> and <code>(srfi :254
+        ephemerons-and-guardians)</code> libraries are a composite of the
+      libraries described above.
+    </p>
+
+    <p>The libraries exports all procedures and syntactic forms
+      provided by the component libraries.</p>
 
     <h2 id="implementation">Implementation</h2>
 
@@ -314,7 +377,7 @@
     <h2 id="acknowledgements">Acknowledgements</h2>
 
     <p>Thanks to the members of the SRFI discussion group, to John
-      Cowan for writing SRFI 246, and to Kent Dybvig and his
+      Cowan for writing SRFI 124 and SRFI 246, and to Kent Dybvig and his
       collaborators for creating Chez Scheme, its documentation, and
       the papers on guardians.
     </p>

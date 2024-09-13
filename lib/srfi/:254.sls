@@ -6,7 +6,7 @@
     make-ephemeron
     ephemeron?
     ephemeron-key
-    ephemeron-datum
+    ephemeron-value
     ephemeron-broken?
     make-guardian
     guardian?
@@ -15,7 +15,7 @@
     transport-cell-guardian?
     transport-cell?
     transport-cell-key
-    transport-cell-datum
+    transport-cell-value
     transport-cell-broken?)
   (import
 
@@ -53,11 +53,11 @@
       (let ([key (car eph)])
         (and (not (bwp-object? key)) key))))
 
-  (define ephemeron-datum
+  (define ephemeron-value
     (lambda (eph)
       (assert (ephemeron-pair? eph))
-      (let ([datum (cdr eph)])
-        (and (not (bwp-object? (car eph))) datum))))
+      (let ([value (cdr eph)])
+        (and (not (bwp-object? (car eph))) value))))
 
   ;; Guardians
 
