@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <!--
-      SPDX-FileCopyrightText: 2024 R. Kent Dybvig, John Cowan,
-      Marc Nieper-Wißkirchen
+      SPDX-FileCopyrightText: Marc Nieper-Wißkirchen
       SPDX-License-Identifier: MIT
     -->
   <head>
@@ -14,7 +13,7 @@
   <body>
     <h1><a href="https://srfi.schemers.org/"><img class="srfi-logo" src="https://srfi.schemers.org/srfi-logo.svg" alt="SRFI surfboard logo" /></a>254: Guardians</h1>
 
-    <p>by R. Kent Dybvig (specification author), John Cowan (author of <a href="https://srfi.schemers.org/srfi-246/">SRFI 246</a>, from which this is derived), and Marc Nieper-Wißkirchen (author of this SRFI) </p>
+    <p>by Marc Nieper-Wißkirchen</p>
 
     <h2 id="status">Status</h2>
 
@@ -34,7 +33,9 @@
 
     <h2 id="issues">Issues</h2>
 
-    <p>None at present.</p>
+    <ul>
+      <li>Include examples.</li>
+    </ul>
 
     <h2 id="rationale">Rationale</h2>
 
@@ -60,8 +61,8 @@
     <p>As specified in the reports on Scheme, implementations of
       Scheme are required to be properly tail-recursive.  The formal
       definition of proper tail-recursion can be found
-      in <cite><a href="#clinger">[1]</a></cite>.  This SRFI extends
-      the property tail recursive semantics in [1] by replacing the last line
+      in <cite><a href="#clinger">[2]</a></cite>.  This SRFI extends
+      the property tail recursive semantics in <cite>[2]</cite> by replacing the last line
       <blockquote>
         and <var>&beta;</var>, &hellip; do not occur within <var>v</var>, <var>&rho;</var>, <var>&kappa;</var>, <var>&sigma;</var>
       </blockquote>
@@ -73,13 +74,18 @@
 
     <p>This SRFI further stipulates that locations and sequences of
       locations can be <dfn>kept live</dfn> in the course of a
-      computaiton.
+      computation.
     </p>
 
-    <h3>Ephemerons</h3>
+    <p>Finally, it stipulates that objects may be <dfn>moved</dfn> in
+      the course of a computation with the following restriction: If
+      an object <var>obj<sub>1</sub></var> is moved, every
+      object <var>obj<sub>2</sub></var> such that <code>eq?</code>
+      returns <code>#t</code> when applied
+      to <var>obj<sub>1</sub></var> and <var>obj<sub>2</sub></var> is moved as well.
+    <p>
 
-    <!-- XXX: Exactnums have attached locations in Chez. -->
-    <!-- How do we want to handle immediate objects? -->
+    <h3>Ephemerons</h3>
 
     <p>An <dfn>ephemeron</dfn> is a record structure with two fields
       called the <dfn>key</dfn> and <dfn>datum</dfn> fields whose
@@ -109,7 +115,8 @@
     <p>Procedure: <strong>make-ephemeron</strong> <var>key</var> <var>datum</var></p>
 
     <p>The <code>make-ephemeron</code> procedure returns a newly
-      allocated ephemeron with fields <var>key</var>
+      allocated ephemeron with fields <var>key</var>, which should
+      denote a location or a sequence of locations,
       and <var>datum</var>.
     </p>
 
@@ -142,50 +149,57 @@
 
     <h3>Guardians</h3>
 
-    <p>A <dfn>guardian</dfn> is a heterogenous structure with two
-      types of elements, <dfn>accessible</dfn>
-      and <dfn>inaccessible</dfn> ones.  The contents of accessible
-      elements are stored in weakly holding locations, the contents
-      of inaccessible elements are stored in strongly holding locations.
-    </p>
+    <p>Guardians first appeared in <cite><a href="dybvig">[3]</a></cite>.</p>
 
-    <!-- XXX: An accessible object X in a guardian may refer to
-         another object Y.  The simple GC algorithm could make Y go away. -->
+    <p>A <dfn>guardian</dfn> is a heterogenous structure with two
+      types of elements, <dfn>accessible</dfn> elements
+      and <dfn>inaccessible</dfn> elements.  An accessible element is
+      a record structure with two fields called the <dfn>object</dfn>
+      and the <dfn>representative</dfn> field.  An inaccessible
+      element contains a single value.
+    </p>
 
     <p>An accessible element of a guardian can be <dfn>made
         inaccessible</dfn>.  When an accessible element is made
-      inaccessible, the accessible element is replaced by an inaccessible
-      element containing the same value.
+      inaccessible, the accessible element is removed from the
+      guardian and an inaccessible element containing the content of
+      the representative field of the removed accessible element is
+      added to the guardian.
     </p>
 
-    <p>If the content of an accessible element
-      denotes a location or a sequence of locations, the
-      element is made inaccessible in the course of the computation when the
-      garbage collector is about to reclaim the location or sequence of
-      locations.  The element may be made inaccessible in the course of a
-      computation if the Scheme implementation can prove that the
-      location or sequence of locations will not be kept live in the
-      future of the computation if the element is made accessible.
+    <p>If the content of an accessible element denotes a location or a
+      sequence of locations, the element is made inaccessible in the
+      course of the computation when the garbage collector would
+      reclaim the location or sequence of locations if all locations
+      denoted by the fields of accessible elements or by inaccessible
+      elements of all guardians were weakly inaccessible.  The element
+      may be made inaccessible in the course of a computation if the
+      Scheme implementation can prove that the location or sequence of
+      locations will not be kept live in the future of the computation
+      if the element is made accessible.
     </p>
-
-    <!-- TODO: representatives -->
 
     <p>
-      A guardian is represented by a Scheme
-      procedure <var>guardian</var>.  When <var>guardian</var> is
-      invoked on a Scheme value <var>obj</var> denoting a location or
-      a sequence of locations, an inaccessible element
-      containing <var>obj</var> is added to the guardian.
-      When <var>guardian</var> is invoked on no arguments, an
-      inaccessible element if available is removed from the guardian
-      and its contents returned.  If no inaccessible element is
-      available, <code>#f</code> is returned.
+      Guardians are represented by a Scheme
+      procedures <var>guardian</var>.  When <var>guardian</var> is
+      invoked on two Scheme values <var>obj</var> and <var>rep</var>,
+      where <var>obj</var> should denote a location or a sequence of
+      locations and <var>rep</var> should not be <code>#f</code>, an
+      accessible element whose object field contains <var>obj</var>
+      and whose representative field contains <var>rep</var> is added
+      to the guardian.
+    </p>
+
+    <p>When <var>guardian</var> is invoked on no
+      arguments, an inaccessible element if available is removed from
+      the guardian and its contents returned.  If no inaccessible
+      element is available, <code>#f</code> is returned.
     </p>
 
     <p>Procedure: <strong>make-guardian</strong></p>
 
     <p>The <code>make-guardian</code> procedure returns a newly
-      allocated guardian with no elements.
+      allocated guardian, initially with no elements.
     </p>
 
     <p>Procedure: <strong>guardian?</strong> <var>obj</var></p>
@@ -196,134 +210,94 @@
 
     <h3>Transport Guardians</h3>
 
-    <!-- XXX: If we store a key that has no associated location in a transport guardian, it will stay there forever. -->
+    <p>Transport (link) cells first appeared in <cite><a href="ghuloum">[1]</a></cite>.</p>
 
-    <p>A <dfn>transport cell</dfn> ...</p>
+    <p>A <dfn>transport cell</dfn> is a record structure with two
+      fields called the <dfn>key</dfn> and <dfn>datum</dfn> fields.
+      The content of the key field is stored in a weakly holding
+      location.
+    </p>
+
+    <p>Transport cells can be <dfn>broken</dfn>.  If the content of its key
+      field denotes a location or a sequence of locations, the
+      transport cell is broken in the course of the computation when the
+      garbage collector reclaims the location or sequence of
+      locations.  The transport cell may be broken in the course of a
+      computation if the Scheme implementation can prove that the
+      location or sequence of locations will not be kept live in the
+      future of the computation if the ephemeron is broken.
+    </p>
+
+    <p>A <dfn>transport cell guardian</dfn> is a homogeneous structure
+      contain transport cells.
+    </p>
+
+    <p>
+      Transport cell guardians are represented by Scheme
+      procedures <var>guardian</var>.  When <var>guardian</var> is
+      invoked on two Scheme values <var>key</var>
+      and <var>datum</var>, a transport cell with
+      fields <var>key</var> and <var>datum</var> is added
+      to <var>guardian</var> and returned to the caller
+      of <var>guardian</var>.
+    </p>
+
+    <p>When <var>guardian</var> is invoked on no arguments and it
+      contains a transport cell whose key may have been moved since
+      the transport cell was added to <var>guardian</var>, such a
+      transport cell is removed from <var>guardian</var> and returned
+      to the caller of <var>guardian</var>.  If <var>guardian</var>
+      contains no such transport cell, <code>#f</code> is returned.
+    </p>
 
     <p>Procedure: <strong>current-hash</strong> <var>obj</var></p>
 
+    <p>The <code>current-hash</code> procedure returns an exact
+      integer. If objects <var>obj<sub>1</sub></var>
+      and <var>obj<sub>2</sub></var> such that <code>eq?</code>
+      returns <code>#t</code> when applied to these objects are not
+      moved between an invocation of <code>current-hash</code>
+      to <var>obj<sub>1</sub></var> and an invocation
+      of <code>current-hash</code> to <var>obj<sub>2</sub></var>, both
+      calls to <code>current-hash</code> return the same exact integer.
+    </p>
+
     <p>Procedure: <strong>make-transport-cell-guardian</strong></p>
+
+    <p>
+      The <code>make-transport-cell-guardian</code> procedure returns
+      a newly allocated transport cell guardian, initially containing
+      no transport cells.
+    </p>
 
     <p>Procedure: <strong>transport-cell-guardian?</strong> <var>obj</var></p>
 
+    <p>The <code>transport-cell-guardian?</code> procedure returns <code>#t</code>
+      if its argument is a transport cell guardian, and <code>#f</code> otherwise.
+    </p>
+
     <p>Procedure: <strong>transport-cell?</strong> <var>obj</var></p>
 
+    <p>The <code>transport-cell?</code> procedure returns <code>#t</code>
+      if its argument is a transport cell, and <code>#f</code> otherwise.
+    </p>
+
     <p>Procedure: <strong>transport-cell-key</strong> <var>transport-cell</var></p>
+
+    <p>The <code>transport-cell-key</code> procedure returns the contents
+      of the key field of <var>transport-cell</var> if the transport-cell hasn't
+      been broken, and <code>#f</code> otherwise.
+    </p>
 
     <p>Procedure: <strong>transport-cell-datum</strong> <var>transport-cell</var></p>
 
     <p>Procedure: <strong>transport-cell-broken?</strong> <var>transport-cell</var></p>
 
+    <p>The <code>transport-cell-broken?</code> procedure
+      returns <code>#t</code> if <var>transport-cell</var> has been broken,
+      and <code>#f</code> otherwise.
+    </p>
 
-
-<!--
-
-    (current-hash KEY)
-A non-pure procedure that returns a value suitable for hashing KEY. This value is only guaranteed to be stable for a limited time.
-
-(make-transport-cell-guardian)
-Returns two values, a guardian procedure and a value MAKE-TRANSPORT-CELL. The latter is a procedure of the following form:
-
-(make-transport-cell KEY VALUE)
-Returns a transport cell object that is registered with the guardian. The transport cell object will be retrievable from the guardian as soon as the current hash of KEY has changed since registration. The KEY is held weakly.
-
-(transport-cell-key TC)
-Returns the key of the transport cell TC.
-
-(transport-cell-value TC)
-Returns the value of the transport cell TC.
-
-(transport-cell-broken? TC)
-Returns #t if the key of the transport cell TC has been garbage collected.
-
--->
-
-
-    <h3>Old Specification</h3>
-
-    <p>Guardians are procedures that encapsulate groups of objects registered for preservation. When a guardian is created, the group of registered objects is empty. An object is registered with a guardian by passing the object as an argument to the guardian, as well as a representative object to be returned when the object is retrieved from the guardian.</p>
-
-    <p>The group of registered objects associated with a guardian is logically subdivided into two disjoint subgroups: a subgroup referred to as the <i>accessible objects group</i>, and another referred to as the <i>inaccessible objects group</i>. Inaccessible objects are objects that have been proven to be inaccessible (except through the guardian mechanism itself or through a weak reference), and accessible objects are objects that have not been proven so. Objects may be registered in more than one guardian, and a guardian may be registered in another guardian.</p>
-
-    <p>The word "proven" is important here: it may be that some objects in the accessible objects subgroup are indeed inaccessible but that this has not yet been proven. This proof may not be made in some cases until long after the object actually becomes inaccessible, typically when the collector is run.</p>
-
-    <p>Objects registered with a guardian are initially placed in the accessible objects group and are moved into the inaccessible objects group at some point after they become inaccessible. The representative of an object in the inaccessible objects group is retrieved by invoking the guardian without arguments. If there are no objects in the inaccessible objects group, the guardian returns <code>#f</code>.</p>
-
-    <p>Although an object registered without a representative and returned from a guardian has been proven otherwise inaccessible (except via a weak pointer), it has not yet been reclaimed by the storage management system and will not be reclaimed until after the last non-weak pointer to it within or outside of the guardian system has been dropped. In fact, objects that have been retrieved from a guardian have no special status in this or in any other regard.  This feature circumvents the problems that might otherwise arise with shared or cyclic structure. A shared or cyclic structure consisting of inaccessible objects is preserved in its entirety, and each piece registered for preservation with any guardian is placed in the inaccessible objects set for that guardian. The programmer then has complete control over the order in which pieces of the structure are processed.</p>
-
-    <p>An object may be registered with a guardian more than once, in which case it will be retrievable more than once.</p>
-
-    <h3 id="Procedures">Procedures</h3>
-
-    <p><code>(make-guardian)</code></p>
-
-    <p>Returns a newly allocated guardian with no registered objects.</p>
-
-    <p><code>(guardian?</code>&nbsp;<em>obj</em><code>)</code></p>
-
-    <p>Returns <code>#t</code> if obj is a guardian and <code>#f</code> otherwise.</p>
-
-    <p><code>(</code><em>guardian obj</em> [ <em>rep</em> ]<code>)</code></p>
-
-    <p>Registers <em>obj</em> with <em>guardian</em>, specifying <em>rep</em> as the representative object. If <em>rep</em> is omitted, the representative object is <em>obj</em>.</p>
-
-    <p><code>(</code><em>guardian</em><code>)</code></p>
-
-    <p>Returns the representative of a single object from <em>guardian</em> and removes the object.</p>
-
-    <p><code>(unregister-guardian&nbsp;</code><em>guardian</em><code>)</code></p>
-
-    <p>Unregisters all the accessible objects currently registered with <em>guardian</em>, with one caveat. Objects registered by other threads than the current thread are not necessarily removed from <em>guardian</em>. To ensure that all objects are unregistered in a multithreaded application, a single thread can be used both to register and unregister objects. Alternatively, an application can arrange to define a handler that calls <code>unregister-guardian</code> after it calls the collector.</p>
-
-    <p>In any case, <code>unregister-guardian</code> returns a list containing the representative objects corresponding to the objects that it unregisters, with duplicates as appropriate if the same object is registered more than once with <em>guardian</em>. Objects already resurrected but not yet retrieved from <em>guardian</em> are not included in the list but remain retrievable from <em>guardian</em>.</p>
-
-    <h2 id="abstract-example">Abstract Example</h2>
-    <p>This example shows how to manage manually allocated and deallocated
-      resources automatically by wrapping them in a <code>handle</code> record
-      type, which can also contain auxiliary data. For example, a resource
-      might be a POSIX file descriptor and a handle might be a port.</p>
-    <p>This implementation is not thread-safe.</p>
-    <pre><code>(library (resources)
-        (export
-        make-handle handle? get-handle-resource
-        get-handle-auxdata set-handle-auxdata!)
-        (import
-        (scheme base)
-        (scheme guardians))
-        (begin
-        ;;; Allocate resources using handles.
-
-        ;; Allocate and deallocate a resource which is not managed by Scheme.
-
-        (define (allocate-resource) ...)
-        (define (free-resource resource) ...)
-
-        ;; Handle type.  Auxdata is Scheme data associated with the resource.
-
-        (define-record-type handle
-        (raw-make-handle resource auxdata)
-        handle?
-        (auxdata get-handle-auxdata set-handle-auxdata!)
-        (resource get-resource))
-
-        ;; The global guardian for all handles
-        (define handle-guardian (make-guardian))
-
-        ;; Return an initialized handle.
-        (define (make-handle auxdata)
-        (let* ((resource (allocate-resource))
-        (handle (raw-make-handle resource auxdata)))
-        ;; Free up resources whose handles are garbage.
-        ;; Alternative: (for-each free-resource
-        ;;                        (unregister-guardian handle-guardian))
-        (let loop ((r (handle-guardian)))
-        (when r
-        (free-resource r)
-        (loop (handle-guardian)))
-        ;; Protect new resource and return handle.
-        ;; The resource is the representative object.
-        (handle-guardian handle resource)
-        handle)))))</code></pre>
     <h2 id="implementation">Implementation</h2>
 
     <p>An implementation for Chez Scheme is provided.</p>
@@ -331,43 +305,46 @@ Returns #t if the key of the transport cell TC has been garbage collected.
     <h2 id="references">References</h2>
 
     <ol>
-      <li id="clinger"><a href="https://dl.acm.org/doi/pdf/10.1145/277650.277719">William D. Clinger: <emph>Proper tail recursion and space efficiency</emph></a></li>
+      <li id="ghuloum"><a href="https://www.schemeworkshop.org/2007/procPaper3.pdf">Abdulziz Ghuloum and R. Kent Dybvig: <i>Generation-Friendly Eq Hash Tables</i></a></li>
+      <li id="clinger"><a href="https://dl.acm.org/doi/pdf/10.1145/277650.277719">William D. Clinger: <i>Proper tail recursion and space efficiency</i></a></li>
+      <li id="dybvig"><a href="https://dl.acm.org/doi/pdf/10.1145/173262.155110">R. Kent Dybvig, Carl Bruggeman, and David Eby: <i>Guardians in a Generation-Based Garbage Collector</i></a></li>
     </ol>
 
     <h2 id="acknowledgements">Acknowledgements</h2>
 
-    <p>Thanks to the members of the SRFI discussion group, to John Cowan
-      for writing SRFI 246, and to Kent Dybvig and his collaborators for
-      creating Chez Scheme and its documentation.</p>
+    <p>Thanks to the members of the SRFI discussion group, to John
+      Cowan for writing SRFI 246, and to Kent Dybvig and his
+      collaborators for creating Chez Scheme, its documentation, and
+      the papers on guardians.
+    </p>
 
     <h2 id="copyright">Copyright</h2>
-    <p>&copy; 2023 John Cowan.
-      This SRFI is a derivative work of <a href="https://cisco.github.io/ChezScheme/csug9.5/smgmt.html#./smgmt:h2">Section 13.2 of <i>Chez Scheme User's Guide version 9</i></a>, which is licensed under the <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache License Version 2.0</a>, &copy; Cisco Systems, Inc. 2022. The SRFI as a whole is licensed as follows:</p>
+    <p>&copy; 2024 Marc Nieper-Wißkirchen.</p>
 
-    <blockquote>
-      <p>
-        Permission is hereby granted, free of charge, to any person
-        obtaining a copy of this software and associated documentation files
-        (the "Software"), to deal in the Software without restriction,
-        including without limitation the rights to use, copy, modify, merge,
-        publish, distribute, sublicense, and/or sell copies of the Software,
-        and to permit persons to whom the Software is furnished to do so,
-        subject to the following conditions:</p>
+    <p>
+      Permission is hereby granted, free of charge, to any person
+      obtaining a copy of this software and associated documentation files
+      (the "Software"), to deal in the Software without restriction,
+      including without limitation the rights to use, copy, modify, merge,
+      publish, distribute, sublicense, and/or sell copies of the Software,
+      and to permit persons to whom the Software is furnished to do so,
+      subject to the following conditions:</p>
 
-      <p>
-        The above copyright notice and this permission notice (including the
-        next paragraph) shall be included in all copies or substantial
-        portions of the Software.</p>
-      <p>
-        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-        EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-        MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-        NONINFRINGEMENT.  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
-        BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
-        ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-        CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-        SOFTWARE.</p>
-    </blockquote>
+    <p>
+      The above copyright notice and this permission notice (including the
+      next paragraph) shall be included in all copies or substantial
+      portions of the Software.</p>
+    <p>
+      THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+      EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+      MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+      NONINFRINGEMENT.  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+      BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+      ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+      CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+      SOFTWARE.</p>
 
     <hr>
-    <address>Editor: <a href="mailto:srfi-editors+at+srfi+dot+schemers+dot+org">Arthur A. Gleckler</a></address></body></html>
+    <address>Editor: <a href="mailto:srfi-editors+at+srfi+dot+schemers+dot+org">Arthur A. Gleckler</a></address>
+  </body>
+</html>
