@@ -11,13 +11,24 @@
     <link rel="stylesheet" href="https://srfi.schemers.org/srfi.css" type="text/css">
     <meta name="viewport" content="width=device-width, initial-scale=1"></head>
   <body>
-    <h1><a href="https://srfi.schemers.org/"><img class="srfi-logo" src="https://srfi.schemers.org/srfi-logo.svg" alt="SRFI surfboard logo" /></a>254: Ephemerons and Guardians</h1>
+    <h1><a href="https://srfi.schemers.org/"><img class="srfi-logo"
+    src="https://srfi.schemers.org/srfi-logo.svg" alt="SRFI surfboard
+    logo" /></a>254: Ephemerons and Guardians</h1>
 
     <p>by Marc Nieper-Wißkirchen</p>
 
     <h2 id="status">Status</h2>
 
-    <p>This SRFI is currently in <em>draft</em> status.  Here is <a href="https://srfi.schemers.org/srfi-process.html">an explanation</a> of each status that a SRFI can hold.  To provide input on this SRFI, please send email to <code><a href="mailto:srfi+minus+254+at+srfi+dotschemers+dot+org">srfi-254@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.  To subscribe to the list, follow <a href="https://srfi.schemers.org/srfi-list-subscribe.html">these instructions</a>.  You can access previous messages via the mailing list <a href="https://srfi-email.schemers.org/srfi-254/">archive</a>.</p>
+    <p>This SRFI is currently in <em>draft</em> status.  Here
+    is <a href="https://srfi.schemers.org/srfi-process.html">an
+    explanation</a> of each status that a SRFI can hold.  To provide
+    input on this SRFI, please send email
+    to <code><a href="mailto:srfi+minus+254+at+srfi+dotschemers+dot+org">srfi-254@<span class="antispam">nospam</span>srfi.schemers.org</a></code>.
+    To subscribe to the list,
+    follow <a href="https://srfi.schemers.org/srfi-list-subscribe.html">these
+    instructions</a>.  You can access previous messages via the
+    mailing
+    list <a href="https://srfi-email.schemers.org/srfi-254/">archive</a>.</p>
     <ul>
       <li>Received: 2024-09-11
         <p>This SRFI was forked from SRFI 246 on that date.</p></li>
@@ -36,17 +47,26 @@
     </p>
 
 
-    <p>Guardians allow programs to protect objects from deallocation by the garbage collector and to determine which objects would otherwise have been deallocated. When the object has associated non-memory resources, a program can register it with a guardian. The GC will mark inaccessible objects but will not collect them; at the program's convenience, inaccessible objects are removed from the guardian and their non-memory resources are disposed of.
+    <p>Guardians allow programs to protect objects from deallocation
+    by the garbage collector and to determine which objects would
+    otherwise have been deallocated. When the object has associated
+    non-memory resources, a program can register it with a
+    guardian. The GC will mark inaccessible objects but will not
+    collect them; at the program's convenience, inaccessible objects
+    are removed from the guardian and their non-memory resources are
+    disposed of.
 
-      Guardians allow objects to be saved from deallocation indefinitely so that they can be reused or so that clean-up or other actions can be performed using the data stored within the objects. Guardians avoid the problems associated with classical finalizers detailed in the Rationale section.</p>
+      Guardians allow objects to be saved from deallocation
+      indefinitely so that they can be reused or so that clean-up or
+      other actions can be performed using the data stored within the
+      objects. Guardians avoid the problems associated with classical
+      finalizers detailed in the Rationale section.</p>
 
     <h2 id="issues">Issues</h2>
 
     <ul>
       <li>Include examples.</li>
       <li>Write tests.</li>
-      <li>Expand the rationale section.</li>
-      <li>Describe and implement sublibraries.</li>
     </ul>
 
     <h2 id="rationale">Rationale</h2>
@@ -61,7 +81,7 @@
       systems and are incorporated in other programming languages as
       well, so their is sufficient experience both in terms of use
       cases and implementability with those features.
-    </p>.
+    </p>
 
     <p>Transport cell guardians are trivially to implement in Scheme
       systems with non-moving garbage collectors.  In Scheme systems
@@ -74,7 +94,10 @@
       tables that hold the keys or the associated values or both
       weakly.</p>
 
-    <p>Use cases for guardians are ...</p>
+    <p>A use cases for guardians is the management of externally
+      allocated resources that need to be eventually freed when all
+      Scheme objects referencing them have been conceptually destroyed
+      by the garbage collector.</p>
 
     <p>Use cases for transport cell guardians are efficient portable
       implementations of <code>eq?</code>-based hashing data structures.
@@ -103,11 +126,17 @@
       in <cite><a href="#clinger">[2]</a></cite>.  This SRFI extends
       the property tail recursive semantics in <cite>[2]</cite> by replacing the last line
       <blockquote>
-        and <var>&beta;</var>, &hellip; do not occur within <var>v</var>, <var>&rho;</var>, <var>&kappa;</var>, <var>&sigma;</var>
+        and <var>&beta;</var>, &hellip; do not occur
+        within <var>v</var>, <var>&rho;</var>, <var>&kappa;</var>, <var>&sigma;</var>
       </blockquote>
       in the garbage collection rule with
       <blockquote>
-        and <var>&beta;</var>, &hellip; do not occur within <var>v</var>, <var>&rho;</var>, <var>&kappa;</var>, <var>&sigma;'</var> where <var>&sigma;</var> = <var>&sigma;'</var>[<var>&beta;'</var>, &hellip; &mapsto; <var>v''</var>, &hellip;] and <var>&beta;'</var> are weakly holding.
+        and <var>&beta;</var>, &hellip; do not occur
+        within <var>v</var>, <var>&rho;</var>, <var>&kappa;</var>, <var>&sigma;'</var>
+        where <var>&sigma;</var>
+        = <var>&sigma;'</var>[<var>&beta;'</var>, &hellip;
+        &mapsto; <var>v''</var>, &hellip;] and <var>&beta;'</var> are
+        weakly holding.
       </blockquote>
     </p>
 
@@ -127,24 +156,32 @@
     <h3>Ephemerons</h3>
 
     <p>The procedures in this section are exported by the <code>(srfi
-        :254 ephemerons-and-guardians ephemerons)</code> library.  The procedure <code>reference-barrier</code> is also exported by the <code>(srfi
-        :254 ephemerons-and-guardians guardians) library</code>.
+        :254 ephemerons-and-guardians ephemerons)</code> library.  The
+        procedure <code>reference-barrier</code> is also exported by
+        the <code>(srfi :254 ephemerons-and-guardians guardians)
+        library</code>.
     </p>
 
     <p>An <dfn>ephemeron</dfn> is a record structure with two fields
-      called the <dfn>key</dfn> and <dfn>value</dfn> fields whose
-      contents are stored in weakly holding locations.</p>
+      called the <dfn>key</dfn> and <dfn>value</dfn> fields.  The
+      content of the key field is stored in a weakly holding
+      location.</p>
 
-    <!-- fixme: VALUE FIELD must not be broken without key -->
+    <p>Ephemerons can be <dfn>broken</dfn>.  When an ephemeron is
+      broken, the contents of its value field are replaced
+      with <code>#f</code>.
+    </p>
 
-    <p>Ephemerons can be <dfn>broken</dfn>.  If the content of its key
-      field denotes a location or a sequence of locations, the
-      ephemeron is broken in the course of the computation when the
-      garbage collector reclaims the location or sequence of
-      locations.  The ephemeron may be broken in the course of a
-      computation if the Scheme implementation can prove that the
-      location or sequence of locations will not be kept live in the
-      future of the computation if the ephemeron is broken.
+    <p>
+      If the content of an ephemeron's key field denotes a location or
+      a sequence of locations, the ephemeron is broken in the course
+      of the computation if the garbage collector would reclaim the
+      location or sequence of locations if the location denoted by the
+      ephemeron's value field were weakly holding.  The ephemeron may
+      be broken in the course of a computation if the Scheme
+      implementation can prove that the location or sequence of
+      locations will not be kept live in the future of the computation
+      if the ephemeron is broken.
     </p>
 
     <p>Procedure: <strong>reference-barrier</strong> <var>obj</var></p>
@@ -182,8 +219,7 @@
     <p>Procedure: <strong>ephemeron-value</strong> <var>ephemeron</var></p>
 
     <p>The <code>ephemeron-value</code> procedure returns the contents
-      of the value field of <var>ephemeron</var> if the ephemeron hasn't
-      been broken, and <code>#f</code> otherwise.
+      of the value field of <var>ephemeron</var>.
     </p>
 
     <p>Procedure: <strong>ephemeron-broken?</strong> <var>ephemeron</var></p>
@@ -369,9 +405,21 @@
     <h2 id="references">References</h2>
 
     <ol>
-      <li id="ghuloum"><a href="https://www.schemeworkshop.org/2007/procPaper3.pdf">Abdulziz Ghuloum and R. Kent Dybvig: <i>Generation-Friendly Eq Hash Tables</i></a></li>
-      <li id="clinger"><a href="https://dl.acm.org/doi/pdf/10.1145/277650.277719">William D. Clinger: <i>Proper tail recursion and space efficiency</i></a></li>
-      <li id="dybvig"><a href="https://dl.acm.org/doi/pdf/10.1145/173262.155110">R. Kent Dybvig, Carl Bruggeman, and David Eby: <i>Guardians in a Generation-Based Garbage Collector</i></a></li>
+      <li id="ghuloum">
+        <a href="https://www.schemeworkshop.org/2007/procPaper3.pdf">Abdulziz
+          Ghuloum and R. Kent Dybvig: <i>Generation-Friendly Eq Hash
+          Tables</i></a>
+      </li>
+      <li id="clinger">
+        <a href="https://dl.acm.org/doi/pdf/10.1145/277650.277719">William
+          D. Clinger: <i>Proper tail recursion and space
+            efficiency</i></a>
+      </li>
+      <li id="dybvig">
+        <a href="https://dl.acm.org/doi/pdf/10.1145/173262.155110">R. Kent
+          Dybvig, Carl Bruggeman, and David Eby: <i>Guardians in a
+          Generation-Based Garbage Collector</i></a>
+      </li>
     </ol>
 
     <h2 id="acknowledgements">Acknowledgements</h2>
@@ -409,6 +457,7 @@
       SOFTWARE.</p>
 
     <hr>
-    <address>Editor: <a href="mailto:srfi-editors+at+srfi+dot+schemers+dot+org">Arthur A. Gleckler</a></address>
+    <address>Editor: <a href="mailto:srfi-editors+at+srfi+dot+schemers+dot+org">Arthur
+    A. Gleckler</a></address>
   </body>
 </html>

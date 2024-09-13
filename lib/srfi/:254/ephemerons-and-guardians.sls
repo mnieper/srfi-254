@@ -6,7 +6,7 @@
     make-ephemeron
     ephemeron?
     ephemeron-key
-    ephemeron-datum
+    ephemeron-value
     ephemeron-broken?
     make-guardian
     guardian?
@@ -15,6 +15,6 @@
     transport-cell-guardian?
     transport-cell?
     transport-cell-key
-    transport-cell-datum
+    transport-cell-value
     transport-cell-broken?)
   (import (srfi :254)))
